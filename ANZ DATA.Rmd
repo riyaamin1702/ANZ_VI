@@ -1,0 +1,225 @@
+---
+title: "ANZ Exploratory Analysis and Predictive Analytics"
+author: "Riya Amin"
+date: "1/21/2020"
+output: pdf_document
+---
+
+
+From the description: This is a synthesized transaction data set with a transaction value of 3 months for 100 simulated customers. It involves sales, ongoing transactions, and salary transactions. The dataset is designed to stimulate practical transaction patterns that are found in the actual transaction data of ANZ.
+ 
+This data set contains 12,043 observations with 23 variables.
+ 
+##Loading Data
+ 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+library(readxl)
+library(tidyr)
+library(ggplot2)
+library(dplyr)
+library(plotly)
+ANZ <- read_excel("D:/ANZ synthesised transaction dataset.xlsx", na = c("NA",""," ","N/A"));
+
+head(ANZ)
+colnames(ANZ)
+
+###### confirming 100 unique cutomers exist in the data
+unique(ANZ$account)
+
+# Checking the mean, medium  and maximum amount of transaction
+summary(ANZ$amount)
+
+```
+
+The average transaction volume over all three months is $187.93, however the average amount is $29, indicating that the average is distorted by significant outliers. So we see that the maximum amount of transcations is $8835.98, whereas the minimum is $0.1. Visualizing the rates of transaction amounts we see that very small transactions are by far the most common.
+
+
+```{r}
+AMT <- ANZ$amount
+
+AMT %>% as.data.frame()%>% 
+  ggplot()+
+  geom_histogram(aes(x=AMT), bins = 30)+
+  labs(x = 'Amount',
+       y= 'Transaction Frequency ',
+       title = "Frequency of Transaction Amounts",
+       subtitle = 'All Customers, August-October')
+
+```
+
+##Number of transaction per month
+
+There were 3943 transactions during August, 4013 in September and 4087 in October. So, there were 4014.33 transactions per month on average. 
+
+
+```{r}
+#number of transaction per month
+library(lubridate)
+
+transaction_by_month <- ANZ %>%
+  group_by(month = floor_date(date, "month")) %>%
+  summarize(num_transactions = length(amount))
+
+transaction_by_month
+
+```
+
+Over the three months, the total number of transactions per customer is 120.43 (num observation / num exclusive acc numbers).
+
+For each month let's see Number of transactions by account.
+
+```{r}
+
+# AUGUST
+
+transaction_august <- ANZ %>%
+  filter(date >= as.Date("2018-08-01")&
+          date <= as.Date("2018-08-31")) %>%
+  group_by(account) %>%
+  summarise(num_transactions = length(amount))
+
+transaction_august
+
+sum(transaction_august$num_transactions)/length(unique(transaction_august$account))
+
+
+# SEPTEMBER
+
+transaction_september <- ANZ %>%
+  filter(date >= as.Date("2018-09-01")&
+          date <= as.Date("2018-09-30")) %>%
+  group_by(account) %>%
+  summarise(num_transactions = length(amount))
+
+transaction_september
+
+sum(transaction_september$num_transactions)/length(unique(transaction_september$account))
+
+#####OCTOBER
+
+transaction_october <- ANZ %>%
+  filter(date >= as.Date("2018-10-01")&
+          date <= as.Date("2018-10-31")) %>%
+  group_by(account) %>%
+  summarise(num_transactions = length(amount))
+
+transaction_october
+
+sum(transaction_october$num_transactions)/length(unique(transaction_october$account))
+```
+
+
+
+##Transaction volume
+
+When plotting transaction volume from August to October by date, we see a cyclical pattern of peaks and troughs. 
+
+
+```{r}
+transaction_volume <- ANZ %>% 
+  group_by(date = date) %>%
+  summarize(volume = length(amount))
+
+transaction_volume %>% ggplot(aes(x=date, y = volume)) +
+  geom_line()+
+  labs(x = "Date",
+       y = "Transaction volumne",
+       title = " Transaction from august to october by date")+
+  geom_point()
+
+```
+
+##Movement Breakdown and Spending Analysis
+
+Looking at the time series of expenditure by year, we see quite different results when looking at the average daily expenditure and mean daily expenditure, due to the distorted mean by significant outliers. The effect is that mean daily spending seems much more unpredictable, varying from about $10 to more than $100. Nevertheless, median daily spending looks more stable and fluctuates between around $20 and $35.
+
+```{r}
+# movement breakdown
+movement_Breakdown = data.frame(Type = levels(factor(ANZ$movement)), 
+                       count = c(nrow(customer_df[ANZ$movement == 'credit',]), 
+                                 nrow(customer_df[ANZ$movement == 'debit',])
+                       )
+)
+movement_Breakdown <- mutate(movement_Breakdown, percent = paste0(round(movement_Breakdown$count/sum(movement_Breakdown$count)*100, 0), '%'))
+pie5 = ggpie(movement_Breakdown, "count", main = ' Movement Breakdown',
+             label = "percent", lab.pos = "in",lab.font = "black", 
+             fill = 'Type', color = "white")
+pie_MB <- pie5 + theme(legend.position = "left")
+pie_MB
+
+
+#median spending
+Spend_median <- ANZ %>%
+  filter(movement == 'debit') %>%
+  group_by(date = date) %>%
+  summarize(median_amt = median(amount))
+
+Spend_median %>% ggplot(aes(x = date, y =median_amt))+
+  geom_line()+
+labs(x = "Date",
+     y = "Median Spending",
+     title = 'Median spending of ANZ customers')+
+  geom_point(shape = 20)
+
+
+#mean spending
+
+Spend_mean <- ANZ %>%
+  filter(movement == 'debit') %>%
+  group_by(date = date) %>%
+  summarize(mean_amt = mean(amount))
+
+Spend_mean %>% ggplot(aes(x = date, y =mean_amt))+
+  geom_line()+
+labs(x = "Date",
+     y = "Average Spending",
+     title = 'Average spending of ANZ customers')+
+  geom_point(shape= 18)
+
+
+```
+
+
+Because there do not appear to be normal cyclical trends in daily spending per week, whether aggregated by mean or median, a typical week can not be selected.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
