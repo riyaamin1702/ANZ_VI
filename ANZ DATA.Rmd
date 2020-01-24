@@ -48,6 +48,10 @@ AMT %>% as.data.frame()%>%
        title = "Frequency of Transaction Amounts",
        subtitle = 'All Customers, August-October')
 
+# exclude the outliers to check the frequency of transactions again.
+
+hist(ANZ$amount[!ANZ$amount %in% boxplot.stats(ANZ$amount)$out], #exclude outliers
+ xlab= 'Transaction Amount',main = 'Histogram of overall transaction amount')
 ```
 
 ##Number of transaction per month
@@ -130,6 +134,25 @@ transaction_volume %>% ggplot(aes(x=date, y = volume)) +
        title = " Transaction from august to october by date")+
   geom_point()
 
+
+#visualising the transactions volume over an average week.
+
+# derive weekday and hour data of each transaction
+ANZ$extraction = as.character(ANZ$extraction)
+ANZ$hour = hour(as.POSIXct(substr(ANZ$extraction,12,19),format="%H:%M:%S"))
+ANZ$weekday = weekdays(ANZ$date)
+
+weekly_transaction <- ANZ %>%
+ select(date,weekday) %>%
+ group_by(date,weekday) %>%
+ summarise(daily_avg_vol = n()) %>%
+ group_by(weekday) %>%
+ summarise(avg_vol=mean(daily_avg_vol,na.rm=TRUE ))
+weekly_transaction$weekday <- factor(weekly_transaction$weekday, levels=c( "Monday","Tuesday","Wednesday",
+ "Thursday","Friday","Saturday","Sunday"))
+ggplot(weekly_transaction,aes(x=weekday, y=avg_vol)) +geom_point()+geom_line(aes(group = 2))+
+ ggtitle('Average transaction volume by weekday') +
+ labs(x='Weekday',y='Transaction volume')
 ```
 
 ##Movement Breakdown and Spending Analysis
